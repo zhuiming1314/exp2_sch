@@ -26,7 +26,7 @@ class TrainOptions():
 
         #train setting
         self.parser.add_argument("--dis_scale", type=int, default=3, help="scale of discriminator")
-        self.parser.add_argument("lr_policy", type=str, default="lambda", help="type of learn rate decay")
+        self.parser.add_argument("--lr_policy", type=str, default="lambda", help="type of learn rate decay")
         self.parser.add_argument("--n_ep", type=int, default=1200, help="number of epochs")
         self.parser.add_argument("--n_ep_decay", type=int, default=600, help="epoch start decay learning rate, set -1 if no decay")
         self.parser.add_argument("--resume", type=str, help="resume training")

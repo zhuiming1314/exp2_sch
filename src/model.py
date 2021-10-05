@@ -177,8 +177,9 @@ class TwinsNet(nn.Module):
         img_a_to_b = self.output_fake_b.detach()
         rec_a = self.rec_a.detach()
         rec_b = self.rec_b.detach()
-        
-        return torch.cat((img_a, img_b, img_a_to_b, rec_a, rec_b), dim=0)
+        row1 = torch.cat((img_a[0:1, ::], img_b[0:1, ::], img_a_to_b[0:1, ::], rec_a[0:1, ::], rec_b[0:1, ::]), 3)
+        row2 = torch.cat((img_a[1:2, ::], img_b[1:2, ::], img_a_to_b[0:1, ::], rec_a[1:2, ::], rec_b[1:2, ::]), 3)
+        return torch.cat((row1, row2), 2)
 
     def forward_transfer(self, input_a, input_b):
         content_a, content_b = self.enc_c(input_a, input_b)
