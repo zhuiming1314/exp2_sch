@@ -145,7 +145,7 @@ class TwinsNet(nn.Module):
             "enc_c": self.enc_c.state_dict(),
             "enc_s": self.enc_s.state_dict(),
             "gen": self.gen.state_dict(),
-            "disB": self.gen.state_dict(),
+            "disB": self.disB.state_dict(),
             "enc_c_opt": self.enc_c_opt.state_dict(),
             "enc_s_opt": self.enc_s_opt.state_dict(),
             "gen_opt": self.gen_opt.state_dict(),
@@ -167,7 +167,7 @@ class TwinsNet(nn.Module):
             self.enc_c_opt.load_state_dict(checkpoint["enc_c_opt"])
             self.enc_s_opt.load_state_dict(checkpoint["enc_s_opt"])
             self.gen_opt.load_state_dict(checkpoint["gen_opt"])
-            self.disB_opt.load_state_dic(checkpoint["disB_opt"])
+            self.disB_opt.load_state_dict(checkpoint["disB_opt"])
 
             return checkpoint["ep"], checkpoint["total_iter"]
     
