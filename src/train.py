@@ -47,7 +47,7 @@ def main():
             #save to display file
             saver.write_display(total_iter, model)
 
-            print("total_it: %d (ep %d, iter %d), lr %08f" % (total_iter, ep, it, model.gen_opt.param_groups[0]["lr"]))
+            print("total_it: %d (ep %d, iter %d), lr %08f" % (total_iter, ep, it, model.genA_opt.param_groups[0]["lr"]))
             total_iter += 1
 
             if total_iter >= max_iter:

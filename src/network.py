@@ -8,120 +8,68 @@ from torch.optim import lr_scheduler
 #-------------------------Encoders----------------------------#
 ###############################################################
 class ContentEncoder(nn.Module):
-    def __init__(self, input_dim_a, input_dim_b):
+    def __init__(self, input_dim):
         super(ContentEncoder, self).__init__()
 
         # content encoder of domain A
-        encA_c = []
-        n_in = input_dim_a
+        enc_c = []
+        n_in = input_dim
         n_out = 64
 
-        encA_c.append(net.ReluConv2d(n_in, n_out, kernel_size=7, stride=1, padding=3))
+        enc_c.append(net.ReluConv2d(n_in, n_out, kernel_size=7, stride=1, padding=3))
         
         for _ in range(1, 3):
             n_in = n_out
             n_out *= 2
-            encA_c.append(net.ReluInsConv2d(n_in, n_out, kernel_size=3, stride=2, padding=1))
+            enc_c.append(net.ReluInsConv2d(n_in, n_out, kernel_size=3, stride=2, padding=1))
 
         n_in = n_out
         for _ in range(1, 4):
-            encA_c.append(net.InsResBlock(n_in, n_out))
-            
-        # content encoder of domain B
-        encB_c = []
-        n_in = input_dim_b
-        n_out = 64
+            enc_c.append(net.InsResBlock(n_in, n_out))
 
-        encB_c.append(net.ReluConv2d(n_in, n_out, kernel_size=7, stride=1, padding=3))
-
-        for _ in range(1, 3):
-            n_in = n_out
-            n_out *= 2
-            encB_c.append(net.ReluInsConv2d(n_in, n_out, kernel_size=3, stride=2, padding=1))
-
-        n_in = n_out
-        for _ in range(1, 4):
-            encB_c.append(net.InsResBlock(n_in, n_out))
-
-        self.encA_c = nn.Sequential(*encA_c)
-        self.encB_c = nn.Sequential(*encB_c)
-    
-    def forward_a(self, xa):
-        return self.encA_c(xa)
-
-    def forward_b(self, xb):
-        return self.encB_c(xb)    
-
-    def forward(self, xa, xb):
-        output_a = self.encA_c(xa)
-        output_b = self.encB_c(xb)
-
-        return output_a, output_b
+        self.enc_c = nn.Sequential(*enc_c)
 
 
+    def forward(self, x):
+        output = self.enc_c(x)
+
+        return output
 
 
 class StyleEncoder(nn.Module):
-    def __init__(self, input_dim_a, input_dim_b, output_nc):
+    def __init__(self, input_dim, output_nc):
         super(StyleEncoder, self).__init__()
 
         # style encoder of domain a
-        encA_s = []
-        n_in = input_dim_a
+        enc_s = []
+        n_in = input_dim
         n_out = 64
 
-        encA_s.append(net.ReluConv2d(n_in, n_out, kernel_size=7, stride=1, padding=3))
+        enc_s.append(net.ReluConv2d(n_in, n_out, kernel_size=7, stride=1, padding=3))
 
         for _ in range(1, 3):
             n_in = n_out
             n_out *= 2
-            encA_s.append(net.ReluConv2d(n_in, n_out, kernel_size=4, stride=2, padding=1))
+            enc_s.append(net.ReluConv2d(n_in, n_out, kernel_size=4, stride=2, padding=1))
 
         n_in = n_out
         for _ in range(1, 3):
-            encA_s.append(net.ReluConv2d(n_in, n_out, kernel_size=4, stride=2, padding=1))
+            enc_s.append(net.ReluConv2d(n_in, n_out, kernel_size=4, stride=2, padding=1))
 
-        encA_s.append(nn.AdaptiveAvgPool2d(1))
-        encA_s.append(nn.Conv2d(n_out, output_nc, kernel_size=1, stride=1, padding=0))
+        enc_s.append(nn.AdaptiveAvgPool2d(1))
+        enc_s.append(nn.Conv2d(n_out, output_nc, kernel_size=1, stride=1, padding=0))
 
-        # style encoder of domain b
-        encB_s = []
-        n_in = input_dim_b
-        n_out = 64
-        
-        encB_s.append(net.ReluConv2d(n_in, n_out, kernel_size=7, stride=1, padding=3))
+        self.enc_s = nn.Sequential(*enc_s)
 
-        for _ in range(1, 3):
-            n_in = n_out
-            n_out *= 2
-            encB_s.append(net.ReluConv2d(n_in, n_out, kernel_size=4, stride=2, padding=1))
+    def forward(self, x):
+        output = self.enc_s(x)
 
-        n_in = n_out
-        for _ in range(1, 3):
-            encB_s.append(net.ReluConv2d(n_in, n_out, kernel_size=4, stride=2, padding=1))
-        
-        encB_s.append(nn.AdaptiveAvgPool2d(1))
-        encB_s.append(nn.Conv2d(n_out, output_nc, kernel_size=1, stride=1, padding=0))
-
-        self.encA_s = nn.Sequential(*encA_s)
-        self.encB_s = nn.Sequential(*encB_s)
-
-    def forward_a(self, xa):
-        return self.encA_s(xa)
-
-    def forward_b(self, xb):
-        return self.encB_s(xb)
-
-    def forward(self, xa, xb):
-        output_a = self.encA_s(xa)
-        output_b = self.encB_s(xb)
-
-        return output_a, output_b
+        return output
 ##############################################################
 #-----------------Generators/Decoders------------------------#
 ##############################################################
 class Generator(nn.Module):
-    def __init__(self, output_dim_a, output_dim_b, nz):
+    def __init__(self, output_dim_a, nz):
         super(Generator, self).__init__()
         self.nz = nz
 
@@ -130,25 +78,25 @@ class Generator(nn.Module):
         n_out = n_in
         n_extra = n_in
         self.n_extra = n_extra
-        
-        self.decA_1 = net.MisInsResBlock(n_in, n_extra)
-        self.decA_2 = net.MisInsResBlock(n_in, n_extra)
-        self.decA_3 = net.MisInsResBlock(n_in, n_extra)
-        self.decA_4 = net.MisInsResBlock(n_in, n_extra)
 
-        decA_5 = []
+        self.dec_1 = net.MisInsResBlock(n_in, n_extra)
+        self.dec_2 = net.MisInsResBlock(n_in, n_extra)
+        self.dec_3 = net.MisInsResBlock(n_in, n_extra)
+        self.dec_4 = net.MisInsResBlock(n_in, n_extra)
+
+        dec_5 = []
         for _ in range(1, 3):
             n_in = n_out
             n_out = n_in // 2
-            decA_5.append(net.ReluInsConvTranspose2d(n_in, n_out, kernel_size=3, stride=2, padding=1, output_padding=1))
-        
+            dec_5.append(net.ReluInsConvTranspose2d(n_in, n_out, kernel_size=3, stride=2, padding=1, output_padding=1))
+
         n_in = n_out
-        decA_5.append(nn.ConvTranspose2d(n_in, output_dim_a, kernel_size=1, stride=1, padding=0))
-        decA_5.append(nn.Tanh())
+        dec_5.append(nn.ConvTranspose2d(n_in, output_dim_a, kernel_size=1, stride=1, padding=0))
+        dec_5.append(nn.Tanh())
 
-        self.decA_5 = nn.Sequential(*decA_5)
+        self.dec_5 = nn.Sequential(*dec_5)
 
-        self.mlpA = nn.Sequential(
+        self.mlp = nn.Sequential(
             nn.Flatten(),
             nn.Linear(8, 256),
             nn.ReLU(inplace=True),
@@ -157,65 +105,19 @@ class Generator(nn.Module):
             nn.Linear(256, n_extra*4)
         )
 
-        # Generator of domain B
-        n_in = 256
-        n_out = n_in
-        n_extra = n_in
-        
-        self.decB_1 = net.MisInsResBlock(n_in, n_extra)
-        self.decB_2 = net.MisInsResBlock(n_in, n_extra)
-        self.decB_3 = net.MisInsResBlock(n_in, n_extra)
-        self.decB_4 = net.MisInsResBlock(n_in, n_extra)
-
-        decB_5 = []
-        for _ in range(1, 3):
-            n_in = n_out
-            n_out = n_in // 2
-            decB_5.append(net.ReluInsConvTranspose2d(n_in, n_out, kernel_size=3, stride=2, padding=1, output_padding=1))
-
-        n_in = n_out
-        decB_5.append(nn.ConvTranspose2d(n_in, output_dim_a, kernel_size=1, stride=1, padding=0))
-        decB_5.append(nn.Tanh())
-
-        self.decB_5 = nn.Sequential(*decB_5)
-
-        self.mlpB = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(8, 256),
-            nn.ReLU(inplace=True),
-            nn.Linear(256, 256),
-            nn.ReLU(inplace=True),
-            nn.Linear(256, n_extra*4)
-        )
     
-    def forward_a(self, x, z):
-        z = self.mlpA(z)
+    def forward(self, x, z):
+        z = self.mlp(z)
         z1, z2, z3, z4 = torch.split(z, self.n_extra, dim=1)
         z1, z2, z3, z4  = z1.contiguous(), z2.contiguous(), z3.contiguous(), z4.contiguous()
 
-        out1 = self.decA_1(x, z1)
-        out2 = self.decA_2(out1, z2)
-        out3 = self.decA_3(out2, z3)
-        out4 = self.decA_4(out3, z4)
-        out5 = self.decA_5(out4)
+        out1 = self.dec_1(x, z1)
+        out2 = self.dec_2(out1, z2)
+        out3 = self.dec_3(out2, z3)
+        out4 = self.dec_4(out3, z4)
+        out5 = self.dec_5(out4)
 
         return out5
-    
-    def forward_b(self, x, z):
-        z = self.mlpB(z)
-        z1, z2, z3, z4 = torch.split(z, self.n_extra, dim=1)
-        z1, z2, z3, z4  = z1.contiguous(), z2.contiguous(), z3.contiguous(), z4.contiguous()
-
-        out1 = self.decB_1(x, z1)
-        out2 = self.decB_2(out1, z2)
-        out3 = self.decB_3(out2, z3)
-        out4 = self.decB_4(out3, z4)
-        out5 = self.decB_5(out4)
-
-        return out5
-
-
-
 
 
 
